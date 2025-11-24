@@ -101,6 +101,11 @@ export async function POST(req: NextRequest) {
 
     realtimeClient.updateSession({
       instructions: existingAgent.instructions,
+      voice: "alloy",
+      model: "gpt-4o-mini-realtime-preview",
+      turn_detection: {
+        type: "server_vad",
+      },
     });
   } else if (eventType === "call.session_participant_left") {
     const event = payload as CallSessionParticipantLeftEvent;
