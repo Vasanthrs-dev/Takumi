@@ -5,6 +5,11 @@ import { StreamTranscriptItem } from "@/modules/meetings/types";
 import { eq, inArray } from "drizzle-orm";
 import JSONL from "jsonl-parse-stringify";
 import { createAgent, openai, TextMessage } from "@inngest/agent-kit";
+import { streamChat } from "@/lib/stream-chat";
+import OpenAI from "openai";
+import { generatedAvatarUri } from "@/lib/avatar";
+
+const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 const summarizer = createAgent({
   name: "summarizer",
@@ -111,6 +116,94 @@ export const meetingProcessing = inngest.createFunction(
           status: "completed",
         })
         .where(eq(meetings.id, event.data.meetingId));
+    });
+  }
+);
+
+export const processChatMessage = inngest.createFunction(
+  { id: "process-chat-message" },
+  { event: "chat/process_message" },
+  async ({ event, step }) => {
+    const { userId, channelId, text, agentId, meetingId } = event.data;
+
+    // 1. Fetch Data (You can re-fetch to be safe, or pass details in event)
+    const [existingMeeting] = await db
+      .select()
+      .from(meetings)
+      .where(eq(meetings.id, meetingId));
+
+    const [existingAgent] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, agentId));
+
+    // 2. Prepare Context
+    const instructions = `
+        You are an AI assistant helping the user revisit a recently completed meeting.
+      Below is a summary of the meeting, generated from the transcript:
+      
+      ${existingMeeting.summary}
+      
+      The following are your original instructions from the live meeting assistant. Please continue to follow these behavioral guidelines as you assist the user:
+      
+      ${existingAgent.instructions}
+      
+      The user may ask questions about the meeting, request clarifications, or ask for follow-up actions.
+      Always base your responses on the meeting summary above.
+      
+      You also have access to the recent conversation history between you and the user. Use the context of previous messages to provide relevant, coherent, and helpful responses. If the user's question refers to something discussed earlier, make sure to take that into account and maintain continuity in the conversation.
+      
+      If the summary does not contain enough information to answer a question, politely let the user know.
+      
+      Be concise, helpful, and focus on providing accurate information from the meeting and the ongoing conversation.
+    `;
+
+    // 3. Get Chat History
+    // Optimization: Use .query() instead of .watch() for backend logic (faster)
+    const channel = streamChat.channel("messaging", channelId);
+    const messagesResult = await channel.query({
+      messages: { limit: 5 },
+    });
+
+    const previousMessages = messagesResult.messages
+      .filter((msg) => msg.text && msg.text.trim() !== "")
+      .map((message) => ({
+        role: message.user?.id === existingAgent.id ? "assistant" : "user",
+        content: message.text || "",
+      }));
+
+    // 4. Call OpenAI
+    const GPTResponse = await openaiClient.chat.completions.create({
+      messages: [
+        { role: "system", content: instructions },
+        ...(previousMessages as any), // Type casting might be needed depending on SDK version
+        { role: "user", content: text },
+      ],
+      model: "gpt-4o-mini",
+    });
+
+    const responseText = GPTResponse.choices[0].message.content;
+    if (!responseText) return;
+
+    // 5. Send Reply
+    const avatarUrl = generatedAvatarUri({
+      seed: existingAgent.name,
+      variant: "botttsNeutral",
+    });
+
+    await streamChat.upsertUser({
+      id: existingAgent.id,
+      name: existingAgent.name,
+      image: avatarUrl,
+    });
+
+    await channel.sendMessage({
+      text: responseText,
+      user: {
+        id: existingAgent.id,
+        name: existingAgent.name,
+        image: avatarUrl,
+      },
     });
   }
 );

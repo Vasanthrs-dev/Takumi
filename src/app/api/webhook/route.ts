@@ -1,7 +1,9 @@
+import OpenAI from "openai";
 import { and, eq, not } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  MessageNewEvent,
   CallEndedEvent,
   CallTranscriptionReadyEvent,
   CallSessionParticipantLeftEvent,
@@ -12,7 +14,6 @@ import {
 import { db } from "@/db";
 import { agents, meetings } from "@/db/schema";
 import { streamVideo } from "@/lib/stream-video";
-import { error } from "console";
 import { inngest } from "@/inngest/client";
 
 function verifySignatureWithSDK(body: string, signature: string): boolean {
@@ -98,18 +99,35 @@ export async function POST(req: NextRequest) {
       call,
       openAiApiKey: process.env.OPENAI_API_KEY!,
       agentUserId: existingAgent.id,
+      model: "gpt-4o-mini-realtime-preview",
     });
 
-    // 2. Then update session settings immediately
-    // Make sure this part is actually running!
+    // 2. Configure the rest of the settings immediately after
+    // These properties must be set here because 'connectOpenAi' doesn't support them.
     await realtimeClient.updateSession({
       instructions: existingAgent.instructions,
       voice: "alloy",
-      model: "gpt-4o-mini-realtime-preview",
       turn_detection: {
         type: "server_vad",
       },
     });
+
+    // const realtimeClient = await streamVideo.video.connectOpenAi({
+    //   call,
+    //   openAiApiKey: process.env.OPENAI_API_KEY!,
+    //   agentUserId: existingAgent.id,
+    // });
+
+    // // 2. Then update session settings immediately
+    // // Make sure this part is actually running!
+    // await realtimeClient.updateSession({
+    //   instructions: existingAgent.instructions,
+    //   voice: "alloy",
+    //   model: "gpt-4o-mini-realtime-preview",
+    //   turn_detection: {
+    //     type: "server_vad",
+    //   },
+    // });
   } else if (eventType === "call.session_participant_left") {
     const event = payload as CallSessionParticipantLeftEvent;
     const meetingId = event.call_cid.split(":")[1];
@@ -166,6 +184,48 @@ export async function POST(req: NextRequest) {
         recordingUrl: event.call_recording.url,
       })
       .where(eq(meetings.id, meetingId));
+  } else if (eventType === "message.new") {
+    const event = payload as MessageNewEvent;
+
+    const userId = event.user?.id;
+    const channelId = event.channel_id;
+    const text = event.message?.text;
+
+    if (!userId || !channelId || !text) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const [existingMeeting] = await db
+      .select()
+      .from(meetings)
+      .where(and(eq(meetings.id, channelId), eq(meetings.status, "completed")));
+
+    if (!existingMeeting) return NextResponse.json({ status: "ok" }); // Not a completed meeting, ignore
+
+    const [existingAgent] = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, existingMeeting.agentId));
+
+    // STOP the loop: If the message sender IS the agent, ignore it.
+    if (!existingAgent || userId === existingAgent.id) {
+      return NextResponse.json({ status: "ok" });
+    }
+    await inngest.send({
+      name: "chat/process_message",
+      data: {
+        userId,
+        channelId,
+        text,
+        agentId: existingAgent.id,
+        meetingId: existingMeeting.id,
+      },
+    });
+
+    return NextResponse.json({ status: "ok" });
   }
 
   return NextResponse.json({ status: "ok" });
