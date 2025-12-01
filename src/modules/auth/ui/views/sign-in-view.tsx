@@ -187,7 +187,14 @@ export const SignInView = () => {
           </Form>
 
           <div className="bg-radial from-sidebar-accent to-sidebar relative hidden md:flex flex-col gap-y-4 items-center justify-center">
-            <Image src="/logo.svg" alt="Logo" className="h-[92px] w-auto" />
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              width={0}
+              height={0}
+              sizes="100vw"
+              className="h-[92px] w-auto"
+            />
             <p className="text-2xl font-semibold text-white">Takumi G5</p>
           </div>
         </CardContent>
