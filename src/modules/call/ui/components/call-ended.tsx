@@ -1,10 +1,4 @@
 import Link from "next/link";
-import { LogInIcon } from "lucide-react";
-import {
-  ToggleAudioPreviewButton,
-  ToggleVideoPreviewButton,
-  VideoPreview,
-} from "@stream-io/video-react-sdk";
 
 import { Button } from "@/components/ui/button";
 

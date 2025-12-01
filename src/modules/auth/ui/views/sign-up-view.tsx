@@ -1,6 +1,7 @@
 "use client";
 
 import { z } from "zod";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -236,7 +237,7 @@ export const SignUpView = () => {
           </Form>
 
           <div className="bg-radial from-sidebar-accent to-sidebar relative hidden md:flex flex-col gap-y-4 items-center justify-center">
-            <img src="/logo.svg" alt="Logo" className="h-[92px]" />
+            <Image src="/logo.svg" alt="Logo" className="h-[92px] w-auto" />
             <p className="text-2xl font-semibold text-white">Takumi G5</p>
           </div>
         </CardContent>
