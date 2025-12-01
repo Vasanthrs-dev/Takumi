@@ -63,7 +63,7 @@ export const agentRouter = createTRPCRouter({
       const [existingAgent] = await db
         .select({
           ...getTableColumns(agents),
-          meetingCount: db.$count(meetings, eq(agents.id, meetings.id)),
+          meetingCount: db.$count(meetings, eq(agents.id, meetings.agentId)),
         })
         .from(agents)
         .where(
@@ -94,7 +94,7 @@ export const agentRouter = createTRPCRouter({
       const data = await db
         .select({
           ...getTableColumns(agents),
-          meetingCount: db.$count(meetings, eq(agents.id, meetings.id)),
+          meetingCount: db.$count(meetings, eq(agents.id, meetings.agentId)),
         })
         .from(agents)
         .where(

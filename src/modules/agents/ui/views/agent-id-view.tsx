@@ -13,7 +13,6 @@ import { GeneratedAvatar } from "@/components/generated-avatar";
 import { Badge } from "@/components/ui/badge";
 import { VideoIcon } from "lucide-react";
 import { toast } from "sonner";
-import { user } from "@/db/schema";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

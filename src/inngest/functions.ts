@@ -123,8 +123,8 @@ export const meetingProcessing = inngest.createFunction(
 export const processChatMessage = inngest.createFunction(
   { id: "process-chat-message" },
   { event: "chat/process_message" },
-  async ({ event, step }) => {
-    const { userId, channelId, text, agentId, meetingId } = event.data;
+  async ({ event }) => {
+    const { channelId, text, agentId, meetingId } = event.data;
 
     // 1. Fetch Data (You can re-fetch to be safe, or pass details in event)
     const [existingMeeting] = await db
@@ -176,7 +176,7 @@ export const processChatMessage = inngest.createFunction(
     const GPTResponse = await openaiClient.chat.completions.create({
       messages: [
         { role: "system", content: instructions },
-        ...(previousMessages as any), // Type casting might be needed depending on SDK version
+        ...(previousMessages as OpenAI.Chat.ChatCompletionMessageParam[]),
         { role: "user", content: text },
       ],
       model: "gpt-4o-mini",

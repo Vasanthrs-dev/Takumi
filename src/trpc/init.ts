@@ -64,7 +64,7 @@ export const premiumProcedure = (entity: "meeting" | "agents") =>
 
     const isPremium = customer.activeSubscriptions.length > 0;
     const isFreeAgentLimitReached = userAgents.count >= MAX_FREE_AGENTS;
-    const isFreeMeetingLimitReached = userAgents.count >= MAX_FREE_MEETINGS;
+    const isFreeMeetingLimitReached = userMeetings.count >= MAX_FREE_MEETINGS;
 
     const shouldThrowMeetingError =
       entity === "meeting" && isFreeMeetingLimitReached && !isPremium;
