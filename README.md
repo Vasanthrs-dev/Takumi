@@ -61,29 +61,45 @@ npm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env.local` file in the root directory. You will need credentials from the services listed in the tech stack.
+Create a `.env.local` file in the root directory. You will need credentials from the services listed below:
 
 ```env
-# Database (Neon/Postgres)
+# 1. Database (Neon/Postgres)
+# Get this from your Neon Dashboard
 DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
 
-# Stream (Video & Chat)
+# 2. Authentication (Better Auth)
+# The URL where your app is running (http://localhost:3000 for dev)
+BETTER_AUTH_URL="http://localhost:3000"
+# Generate a random string: openssl rand -base64 32
+BETTER_AUTH_SECRET="your_generated_secret_here"
+
+# 3. OAuth Providers (Required for Sign In)
+# You need to set these up in Google Cloud Console or GitHub Developer Settings
+GITHUB_CLIENT_ID="your_github_client_id"
+GITHUB_CLIENT_SECRET="your_github_client_secret"
+# (Optional: Add Google if you are using it)
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+
+# 4. Stream (Video & Chat)
+# Get these from the GetStream.io Dashboard
 NEXT_PUBLIC_STREAM_VIDEO_API_KEY="your_stream_api_key"
 STREAM_VIDEO_SECRET_KEY="your_stream_secret_key"
 
-# OpenAI (AI Summarization & Chat)
+# 5. AI Services (OpenAI)
+# Get this from platform.openai.com
 OPENAI_API_KEY="sk-..."
 
-# Authentication (Better Auth)
-BETTER_AUTH_SECRET="your_generated_secret"
-BETTER_AUTH_URL="http://localhost:3000"
-
-# Payments (Polar)
+# 6. Payments (Polar)
+# Get this from polar.sh settings
 POLAR_ACCESS_TOKEN="your_polar_access_token"
 
-# Inngest (Background Jobs)
-INNGEST_EVENT_KEY="local" # Optional for local dev
-INNGEST_SIGNING_KEY="local" # Optional for local dev
+# 7. Background Jobs (Inngest)
+# Optional for local development (uses Inngest Dev Server default)
+# Required for production
+INNGEST_EVENT_KEY="local"
+INNGEST_SIGNING_KEY="local"
 
 ```
 
@@ -149,6 +165,7 @@ src/
 │   ├── auth/         # Authentication views
 │   ├── call/         # Video call UI & logic
 │   ├── dashboard/    # Dashboard layout & components
+│   ├── home/         # Landing page & public views
 │   ├── meetings/     # Meeting management & transcripts
 │   └── premium/      # Polar subscription logic
 └── trpc/             # tRPC API definition
